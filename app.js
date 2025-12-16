@@ -1,6 +1,6 @@
 /* ========= CONFIG ========= */
 
-//const SUPABASE_URL = 'https://kfjwhpdbtjeslwzpkqcm.supabase.co'; // VCH
+//const SUPABASE_URL = 'https://kfjwhpdbtjeslwzpkqcm.supabase.co'; // vitalii-chukhrii
 //const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmandocGRidGplc2x3enBrcWNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MTg0NzQsImV4cCI6MjA4MTM5NDQ3NH0.0LJB1K58KpKDVCeeVFaHuZUK_CKNJLsqYZ3Hqk4JkPc';
 
 const SUPABASE_URL = 'https://ssavnmbmquviofwudfts.supabase.co'; // ICH
