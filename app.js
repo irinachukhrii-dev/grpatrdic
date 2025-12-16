@@ -1,9 +1,12 @@
 /* ========= CONFIG ========= */
 
-const SUPABASE_URL = 'https://ssavnmbmquviofwudfts.supabase.co';
+//const SUPABASE_URL = 'https://kfjwhpdbtjeslwzpkqcm.supabase.co'; // VCH
+//const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmandocGRidGplc2x3enBrcWNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MTg0NzQsImV4cCI6MjA4MTM5NDQ3NH0.0LJB1K58KpKDVCeeVFaHuZUK_CKNJLsqYZ3Hqk4JkPc';
+
+const SUPABASE_URL = 'https://ssavnmbmquviofwudfts.supabase.co'; // ICH
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzYXZubWJtcXV2aW9md3VkZnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4ODA1MjUsImV4cCI6MjA4MTQ1NjUyNX0.QZe8u89QbGcRAjKzb21uflxaSJ3OyEg1dkkz1sXIBtE';
 
-const supabase = window.supabase.createClient(
+const supabaseInstance = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
@@ -17,6 +20,48 @@ const PAGE_SIZE = 10;   // ← можно менять
 let currentPage = 1;
 let totalPages = 1;
 let totalCount = 0;
+
+/* ======== AUTH BOX ========= */
+
+const authBox = document.getElementById('auth');
+
+const loginForm = `
+  <div class="bg-white p-4 rounded shadow max-w-sm">
+    <h2 class="font-semibold mb-2">Login</h2>
+    <input id="email" class="border p-1 w-full mb-2" placeholder="Email" />
+    <input id="password" type="password"
+      class="border p-1 w-full mb-2" placeholder="Password" />
+    <button id="login"
+      class="bg-blue-600 text-white px-3 py-1 rounded w-full">
+      Login / Register
+    </button>
+  </div>
+`;
+
+async function login() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  // если нет пользователя — он создастся
+  const { error } = await supabaseInstance.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    const { error: signUpError } =
+      await supabaseInstance.auth.signUp({ email, password });
+    if (signUpError) alert(signUpError.message);
+  }
+}
+
+async function logout() {
+  await supabaseInstance.auth.signOut();
+}
+
+supabaseInstance.auth.onAuthStateChange(() => {
+  renderAuth();
+});
 
 /* ========= UI HELPERS ========= */
 
@@ -71,7 +116,7 @@ async function loadWords() {
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  let query = supabase
+  let query = supabaseInstance
     .from('words')
     .select(`
       id,
@@ -207,6 +252,41 @@ function renderPagination() {
   `;
 }
 
+async function renderAuth() {
+  const { data: { user } } = await supabaseInstance.auth.getUser();
+
+  if (!user) {
+    authBox.innerHTML = loginForm;
+    document.getElementById('login').onclick = login;
+    return;
+  }
+
+  // получить роль
+  const { data: profile } = await supabaseInstance
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  role = profile?.role || 'viewer';
+
+  authBox.innerHTML = `
+    <div class="flex justify-between items-center">
+      <div>
+        Logged in as <b>${user.email}</b>
+        (${role})
+      </div>
+      <button onclick="logout()"
+        class="text-red-600">Logout</button>
+    </div>
+  `;
+
+  document.getElementById('editor-panel')
+    .classList.toggle('hidden', role !== 'editor');
+
+  loadWords();
+}
+
 window.goPage = page => {
   page = Number(page);
   if (isNaN(page)) return;
@@ -217,6 +297,7 @@ window.goPage = page => {
   currentPage = page;
   loadWords();
 };
+
 
 /* ========= FORMS ========= */
 
@@ -240,7 +321,7 @@ window.addTranslation = async (wordId, btn) => {
 
   if (!wordua) return alert('wordua required');
 
-  const { error } = await supabase
+  const { error } = await supabaseInstance
     .from('translations')
     .insert({ word_id: wordId, wordua, description });
 
@@ -249,7 +330,7 @@ window.addTranslation = async (wordId, btn) => {
 };
 
 async function deleteTranslation(id) {
-  const { error } = await supabase
+  const { error } = await supabaseInstance
     .from('translations')
     .delete()
     .eq('id', id);
@@ -275,7 +356,7 @@ document.getElementById('add-word').onclick = async () => {
   const wordgr = document.getElementById('new-word').value.trim();
   if (!wordgr) return;
 
-  const { error } = await supabase
+  const { error } = await supabaseInstance
     .from('words')
     .insert({ wordgr });
 
@@ -289,7 +370,3 @@ document.getElementById('add-word').onclick = async () => {
 /* ========= INIT ========= */
 
 loadWords();
-
-
-
-
