@@ -22,9 +22,29 @@ let totalPages = 1;
 let totalCount = 0;
 
 /* ======== AUTH BOX ========= */
-
+const overlay = document.getElementById('login-overlay');
+const appContent = document.getElementById('app-content');
+const errorBox = document.getElementById('login-error');
 const authBox = document.getElementById('auth');
 
+function showLogin() {
+  overlay.classList.remove('hidden');
+  appContent.classList.add('blur-sm', 'pointer-events-none');
+}
+
+function hideLogin() {
+  overlay.classList.add('hidden');
+  appContent.classList.remove('blur-sm', 'pointer-events-none');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !overlay.classList.contains('hidden')) {
+    document.getElementById('login-btn').click();
+  }
+});
+
+
+/*
 const loginForm = `
   <div class="bg-white p-4 rounded shadow max-w-sm">
     <h2 class="font-semibold mb-2">Login</h2>
@@ -37,8 +57,8 @@ const loginForm = `
     </button>
   </div>
 `;
-
-async function login() {
+*/
+/*async function login() {
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
 
@@ -54,14 +74,92 @@ async function login() {
     if (signUpError) alert(signUpError.message);
   }
 }
+*/
+document.getElementById('login-btn').onclick = async () => {
+  errorBox.classList.add('hidden');
+
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('pass').value;
+
+  if (!email || !password) {
+    showError('Email and password required');
+    return;
+  }
+
+  let { error } = await supabaseInstance.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  // если пользователь не существует — регистрируем
+  if (error) {
+    const { error: signUpError } =
+      await supabaseInstance.auth.signUp({ email, password });
+
+    if (signUpError) {
+      showError(signUpError.message);
+      return;
+    }
+  }
+
+  hideLogin();
+  await initUser();
+};
 
 async function logout() {
   await supabaseInstance.auth.signOut();
+  showLogin();
 }
 
+/*async function logout() {
+  await supabaseInstance.auth.signOut();
+}
+*/
+
+supabaseInstance.auth.onAuthStateChange((_event, session) => {
+  if (session) {
+    initUser();
+  } else {
+    showLogin();
+  }
+});
+/*
 supabaseInstance.auth.onAuthStateChange(() => {
   renderAuth();
 });
+*/
+async function initUser() {
+  const { data: { user } } = await supabaseInstance.auth.getUser();
+
+  if (!user) {
+    showLogin();
+    return;
+  }
+
+  const { data: profile } = await supabaseInstance
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  role = profile?.role || 'viewer';
+
+  document.getElementById('editor-panel')
+    .classList.toggle('hidden', role !== 'editor');
+  
+    authBox.innerHTML = `
+    <div id="auth" class="flex justify-between items-center">
+      <div>
+        Logged in as <b>${user.email}</b>
+        (${role})
+      </div>
+      <button onclick="logout()"
+        class="text-red-600">Logout</button>
+    </div>
+  `;
+  hideLogin();
+  loadWords();
+}
 
 /* ========= UI HELPERS ========= */
 
@@ -104,7 +202,7 @@ document.querySelectorAll('.role-btn').forEach(btn => {
 
 /* ========= SEARCH ========= */
 
-document.getElementById('search').oninput = e => {
+document.getElementById('dict_search').oninput = e => {
   searchText = e.target.value.trim();
   currentPage = 1;
   loadWords();
@@ -167,8 +265,8 @@ function renderWords(words) {
       <div class="translations hidden mt-3 space-y-3">
         ${w.translations.map(t => `
           <div class="border rounded p-2">
-            <div class="font-medium">${highlight(t.wordua, searchText)}</div>
-            <div class="text-sm text-gray-700 whitespace-pre-wrap">${highlight(t.description || '', searchText)}</div>
+            <div class="font-medium">${t.wordua}</div>
+            <div class="text-sm text-gray-700 whitespace-pre-wrap">${t.description || ''}</div>
             ${role === 'editor'
               ? `<button data-id="${t.id}" class="del mt-1 text-red-600 text-sm">Delete</button>`
               : ''}
@@ -198,7 +296,7 @@ function renderPagination() {
   if (totalCount === 0) return;
 
   el.innerHTML = `
-    <div class="flex flex-col sm:flex-row items-center gap-3">
+    <div id="pagination" class="flex flex-col sm:flex-row items-center gap-3">
 
       <div class="text-sm text-gray-600">
         Found <strong>${totalCount}</strong> records
@@ -223,6 +321,7 @@ function renderPagination() {
         <span class="text-sm mx-2">
           Page
           <input
+            id="page-num"
             type="number"
             min="1"
             max="${totalPages}"
@@ -252,6 +351,7 @@ function renderPagination() {
   `;
 }
 
+/*
 async function renderAuth() {
   const { data: { user } } = await supabaseInstance.auth.getUser();
 
@@ -286,6 +386,7 @@ async function renderAuth() {
 
   loadWords();
 }
+*/
 
 window.goPage = page => {
   page = Number(page);
@@ -342,7 +443,7 @@ async function deleteTranslation(id) {
 /* ========= ADD WORD ========= */
 
 document.getElementById('editor-panel').innerHTML = `
-  <div class="bg-white p-3 rounded shadow">
+  <div id="editor-panel" class="bg-white p-3 rounded shadow">
     <h3 class="font-semibold mb-2">Add new Greek / Latin word</h3>
     <input id="new-word" class="border p-1 w-full mb-2" maxlength="30" />
     <button id="add-word"
@@ -367,6 +468,6 @@ document.getElementById('add-word').onclick = async () => {
   }
 };
 
-/* ========= INIT ========= */
+/* ========= INIT ========= 
 
-loadWords();
+loadWords(); */
