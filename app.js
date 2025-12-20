@@ -11,7 +11,8 @@ const supabaseInstance = window.supabase.createClient(
   SUPABASE_KEY
 );
 
-let role = 'viewer';
+let role = 'viewer';       // роль пользователя из БД
+let mode = 'viewer';       // режим интерфейса (viewer | editor)
 let searchText = '';
 
 /* ========= PAGINATION CONFIG ========= */
@@ -43,38 +44,6 @@ document.addEventListener('keydown', e => {
   }
 });
 
-
-/*
-const loginForm = `
-  <div class="bg-white p-4 rounded shadow max-w-sm">
-    <h2 class="font-semibold mb-2">Login</h2>
-    <input id="email" class="border p-1 w-full mb-2" placeholder="Email" />
-    <input id="password" type="password"
-      class="border p-1 w-full mb-2" placeholder="Password" />
-    <button id="login"
-      class="bg-blue-600 text-white px-3 py-1 rounded w-full">
-      Login / Register
-    </button>
-  </div>
-`;
-*/
-/*async function login() {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-
-  // если нет пользователя — он создастся
-  const { error } = await supabaseInstance.auth.signInWithPassword({
-    email,
-    password
-  });
-
-  if (error) {
-    const { error: signUpError } =
-      await supabaseInstance.auth.signUp({ email, password });
-    if (signUpError) alert(signUpError.message);
-  }
-}
-*/
 document.getElementById('login-btn').onclick = async () => {
   errorBox.classList.add('hidden');
 
@@ -111,11 +80,6 @@ async function logout() {
   showLogin();
 }
 
-/*async function logout() {
-  await supabaseInstance.auth.signOut();
-}
-*/
-
 supabaseInstance.auth.onAuthStateChange((_event, session) => {
   if (session) {
     initUser();
@@ -123,11 +87,7 @@ supabaseInstance.auth.onAuthStateChange((_event, session) => {
     showLogin();
   }
 });
-/*
-supabaseInstance.auth.onAuthStateChange(() => {
-  renderAuth();
-});
-*/
+
 async function initUser() {
   const { data: { user } } = await supabaseInstance.auth.getUser();
 
@@ -143,11 +103,9 @@ async function initUser() {
     .single();
 
   role = profile?.role || 'viewer';
-
-  document.getElementById('editor-panel')
-    .classList.toggle('hidden', role !== 'editor');
+  mode = 'viewer'; // всегда стартуем как Viewer
   
-    authBox.innerHTML = `
+  authBox.innerHTML = `
     <div id="auth" class="flex justify-between items-center">
       <div>
         Logged in as <b>${user.email}</b>
@@ -157,12 +115,14 @@ async function initUser() {
         class="text-red-600">Logout</button>
     </div>
   `;
+  
+  setupModeButton();
+  applyMode();
   hideLogin();
   loadWords();
 }
 
 /* ========= UI HELPERS ========= */
-
 function highlight(text, query) {
   if (!query) return text;
 
@@ -175,33 +135,39 @@ function highlight(text, query) {
   );
 }
 
-function roleBtnStyle(active) {
-  return `
-    px-3 py-1 rounded border
-    ${active ? 'bg-blue-600 text-white' : 'bg-white'}
-  `;
+function setupModeButton() {
+  const btn = document.getElementById('mode-toggle');
+  if (role !== 'editor') {
+    btn.hidden = true;
+  } else {
+    btn.hidden = false;
+    btn.onclick = toggleMode;
+  }
 }
 
-document.querySelectorAll('.role-btn').forEach(btn => {
-  btn.className = roleBtnStyle(btn.dataset.role === role);
+function toggleMode() {
+  mode = mode === 'viewer' ? 'editor' : 'viewer';
+  applyMode();
+  loadWords();
+}
+function applyMode() {
+  const btn = document.getElementById('mode-toggle');
+  const editorPanel = document.getElementById('editor-panel');
 
-  btn.onclick = () => {
-    role = btn.dataset.role;
-    currentPage = 1;
-
-    document.querySelectorAll('.role-btn').forEach(b =>
-      b.className = roleBtnStyle(b.dataset.role === role)
-    );
-
-    document.getElementById('editor-panel')
-      .classList.toggle('hidden', role !== 'editor');
-
-    loadWords();
-  };
-});
+  if (mode === 'editor') {
+    btn.textContent = 'View';
+    btn.className =
+      'px-4 py-2 rounded font-medium bg-green-600 text-white';
+    editorPanel.classList.remove('hidden');
+  } else {
+    btn.textContent = 'Edit';
+    btn.className =
+      'px-4 py-2 rounded font-medium bg-blue-600 text-white';
+    editorPanel.classList.add('hidden');
+  }
+}
 
 /* ========= SEARCH ========= */
-
 document.getElementById('dict_search').oninput = e => {
   searchText = e.target.value.trim();
   currentPage = 1;
@@ -209,7 +175,6 @@ document.getElementById('dict_search').oninput = e => {
 };
 
 /* ========= LOAD WORDS ========= */
-
 async function loadWords() {
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -247,7 +212,6 @@ async function loadWords() {
 
 
 /* ========= RENDER ========= */
-
 function renderWords(words) {
   const list = document.getElementById('word-list');
   list.innerHTML = '';
@@ -267,13 +231,13 @@ function renderWords(words) {
           <div class="border rounded p-2">
             <div class="font-medium">${t.wordua}</div>
             <div class="text-sm text-gray-700 whitespace-pre-wrap">${t.description || ''}</div>
-            ${role === 'editor'
+            ${mode === 'editor'
               ? `<button data-id="${t.id}" class="del mt-1 text-red-600 text-sm">Delete</button>`
               : ''}
           </div>
         `).join('')}
 
-        ${role === 'editor' ? translationForm(w.id) : ''}
+        ${mode === 'editor' ? translationForm(w.id) : ''}
       </div>
     `;
 
@@ -351,43 +315,6 @@ function renderPagination() {
   `;
 }
 
-/*
-async function renderAuth() {
-  const { data: { user } } = await supabaseInstance.auth.getUser();
-
-  if (!user) {
-    authBox.innerHTML = loginForm;
-    document.getElementById('login').onclick = login;
-    return;
-  }
-
-  // получить роль
-  const { data: profile } = await supabaseInstance
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  role = profile?.role || 'viewer';
-
-  authBox.innerHTML = `
-    <div class="flex justify-between items-center">
-      <div>
-        Logged in as <b>${user.email}</b>
-        (${role})
-      </div>
-      <button onclick="logout()"
-        class="text-red-600">Logout</button>
-    </div>
-  `;
-
-  document.getElementById('editor-panel')
-    .classList.toggle('hidden', role !== 'editor');
-
-  loadWords();
-}
-*/
-
 window.goPage = page => {
   page = Number(page);
   if (isNaN(page)) return;
@@ -401,7 +328,6 @@ window.goPage = page => {
 
 
 /* ========= FORMS ========= */
-
 function translationForm(wordId) {
   return `
     <div class="border-t pt-2">
@@ -441,7 +367,6 @@ async function deleteTranslation(id) {
 }
 
 /* ========= ADD WORD ========= */
-
 document.getElementById('editor-panel').innerHTML = `
   <div id="editor-panel" class="bg-white p-3 rounded shadow">
     <h3 class="font-semibold mb-2">Add new Greek / Latin word</h3>
@@ -467,7 +392,3 @@ document.getElementById('add-word').onclick = async () => {
     loadWords();
   }
 };
-
-/* ========= INIT ========= 
-
-loadWords(); */

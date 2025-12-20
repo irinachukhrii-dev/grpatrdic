@@ -11,34 +11,27 @@
   <div id="app-content" class="transition filter" >
     <div id="auth" class="mb-4"></div>
     <div id="content-wrapper" class="max-w-5xl mx-auto p-4">
-    
-      <h1 class="text-2xl font-bold mb-4">Greek / Latin Dictionary</h1>
-    
-      <!-- Role switch -->
-      <div id="role-switch" class="flex gap-2 mb-4">
-        <button data-role="viewer" class="role-btn">Viewer</button>
-        <button data-role="editor" class="role-btn">Editor</button>
+      <div id="head-panel" class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold mb-4">Greek / Latin Dictionary</h1>
+        <!-- Только для editor -->
+        <button id="mode-toggle" class="hidden px-4 py-2 rounded font-medium transition">Edit</button>
       </div>
-
       <!-- Editor -->
-      <div id="editor-panel" class="hidden mb-6"></div>
-    
+      <div id="editor-panel" class="hidden mb-6"></div>    
       <!-- Search -->
       <input
-        id="dict_search"
-        name="dict_search"
-        type="search"
-        autocomplete="off"
-        placeholder="Search by Greek / Latin word"
-        class="w-full p-2 border rounded mb-4"
+          id="dict_search"
+          type="search"
+          autocomplete="off"
+          placeholder="Search by Greek / Latin word"
+          class="flex-1 p-2 mb-4 w-full border rounded"
       />
-
       <!-- List -->
       <div id="word-list" class="space-y-4"></div>
       <div id="pagination" class="flex items-center justify-center gap-3 mt-6"></div>
     </div>
   </div>
-  
+
   <!-- LOGIN OVERLAY -->
   <div id="login-overlay"
      class="fixed inset-0 z-50 hidden
